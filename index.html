@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Basic PWA</title>
+        <!--all libraries required for offline work must be local files-->
+        <script src="tailwind.css"></script>
+        <style>
+            [v-cloak] {
+                display: none;
+            }
+        </style>
+        <!--add manifest required for pwa-->
+        <link rel="manifest" href="manifest.json" />
+    </head>
+    <body>
+        <div v-cloak id="basic_pwa_app" class="flex flex-col w-full h-full p-2">
+            <h1 class="text-xl font-bold">Basic PWA - Example</h1>
+
+            <div class="flex flex-col">
+                <h2 class="text-lg font-bold">Save a image</h2>
+                <input
+                    class="py-4"
+                    type="file"
+                    @change="saveFiles"
+                    accept="image/*"
+                />
+                <img :src="uploadImage.src" width="100px" height="auto" />
+                <button
+                    @click="saveImageToDb()"
+                    type="button"
+                    class="w-44 bg-black text-white"
+                >
+                    Save to local DB
+                </button>
+            </div>
+
+            <div class="py-8">
+                <h2 class="text-lg font-bold">Local images</h2>
+                <ul class="list-disc list-inside px-4">
+                    <li v-for="(item, index) in dbImages">
+                        <span class="pr-8">{{item.name}}</span>
+                        <div class="flex flex-col md:flex-row">
+                            <button
+                                @click="loadImage(index)"
+                                type="button"
+                                class="w-40 bg-black text-white"
+                            >
+                                View local image
+                            </button>
+                            <button
+                                @click="deleteImage(item.id)"
+                                type="button"
+                                class="w-36 bg-black text-white"
+                            >
+                                Delete image
+                            </button>
+                        </div>
+                        <hr />
+                    </li>
+                </ul>
+                <div class="flex justify-center align-middle items-center">
+                    <img :src="openImage" width="100px" height="auto" />
+                </div>
+            </div>
+
+            <div
+                class="absolute bottom-0 flex flex-col justify-center align-middle items-center w-full"
+            >
+                <button
+                    id="btnInstall"
+                    type="button"
+                    class="w-44 bg-black text-white"
+                >
+                    Install PWA
+                </button>
+
+                <a
+                    href="https://www.flaticon.com/free-icons/computer"
+                    title="computer icons"
+                    >Computer icons created by Freepik - Flaticon</a
+                >
+            </div>
+        </div>
+        <!--all libraries required for offline work must be local files-->
+        <script src="vue.js"></script>
+        <script src="dexie.js"></script>
+        <script src="index-controller.js"></script>
+        <script src="install.js"></script>
+        <script type="text/javascript">
+            //validate if the app is installed
+            if (window.matchMedia("(display-mode: standalone)").matches) {
+                //already installed
+                var installButton = document.getElementById("btnInstall");
+                installButton.setAttribute("hidden", true);
+            }
+
+            //register service worker.
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker
+                        .register("service-worker.js")
+                        .then((reg) => {
+                            if (!navigator.serviceWorker.controller) {
+                                //has the latest version
+                                return;
+                            }
+
+                            if (reg.waiting) {
+                                //there is a new version installed and waiting to be activated
+                                updateReady(reg.waiting);
+                            }
+
+                            if (reg.installing) {
+                                //there is a new version installed and waiting for it to be activated
+                                trackInstalling(reg.installing);
+                                return;
+                            }
+
+                            reg.addEventListener("updatefound", function () {
+                                trackInstalling(reg.installing);
+                                //return;
+                            });
+                        });
+
+                    navigator.serviceWorker.addEventListener(
+                        "controllerchange",
+                        function (e) {
+                            //window.location.reload;
+                            //document.location.reload(true);
+                            console.log(e);
+                            return;
+                        }
+                    );
+                });
+            }
+
+            var trackInstalling = function (worker) {
+                worker.addEventListener("statechange", function () {
+                    if (worker.state === "installed") {
+                        //there is a new version installed and waiting for it to be activated
+                        updateReady(worker);
+                    }
+                });
+
+                var updateReady = function (worker) {
+                    worker.postMessage({ action: "skipWaiting" });
+                };
+            };
+        </script>
+    </body>
+</html>
